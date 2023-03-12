@@ -1,0 +1,109 @@
+name: lint
+on:
+  push:
+    branches: ['main']
+  pull_request:
+    branches: ['main']
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      # https://github.com/actions/checkout
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      # https://hub.docker.com/r/backplane/yamllint
+      - name: yamllint (.github)
+        run: >-
+          docker run
+          --rm
+          --volume "$(pwd):/work"
+          backplane/yamllint
+          -f github
+          .github
+
+      # https://github.com/rhysd/actionlint
+      - name: actionlint
+        run: |-
+          #!/bin/sh
+          set -eux
+          docker run \
+            --rm \
+            --volume "$(pwd):/work" \
+            --workdir /work \
+            rhysd/actionlint \
+            -format '{{range $err := .}}::error file={{$err.Filepath}},line={{$err.Line}},col={{$err.Column}}::{{$err.Message}}%0A```%0A{{replace $err.Snippet "\\n" "%0A"}}%0A```\n{{end}}' \
+            -ignore 'SC2016:'
+
+      - name: Render Helm charts
+        run: |-
+          #!/bin/sh
+          set -eux
+          ACT="${ACT:-}"
+
+          # patch for act envionment
+          if [ -n "$ACT" ]; then
+            helm_installer="https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3"
+            curl -sSL "$helm_installer" | bash
+          fi
+
+          mkdir -p rendered_charts
+
+          for chart in charts/*; do
+            if [ "$chart" = "charts/*" ]; then
+              printf '%s\n' "no charts found in charts subdirectory, this should not happen" >&2
+              exit 1
+            fi
+
+            chart_name=$(basename "$chart" | tr -Cd 'A-Za-z0-9-_')
+            tmp_dir=$(mktemp -d "rendered_charts/${chart_name}-XXXXXXXXX")
+
+            helm template "$chart_name" "$chart" --output-dir="${tmp_dir}";
+          done
+          exit 0
+
+      # https://hub.docker.com/r/backplane/yamllint
+      - name: yamllint (rendered_charts)
+        run: |-
+          #!/bin/sh
+          set -eux
+          ACT="${ACT:-}"
+
+          # patch for act envionment
+          if [ -n "$ACT" ]; then
+            # running under act (docker in docker) makes bind-mounting the cwd
+            # ineffective for any changes we've made (like rendering the charts)
+            vol_uuid=$(python3 -c 'import uuid; print(uuid.uuid4())')
+            volname=$(docker volume create "act-temp-lint-${vol_uuid}")
+
+            # copy the cwd to our new temp volume
+            tar -czf - . | docker run --rm -i --volume "${volname}:/work" \
+              backplane/toybox \
+              tar -C /work -xzf -
+          else
+            volname="$(pwd)"
+          fi;
+
+          if \
+            docker run \
+              --rm \
+              --volume "${volname}:/work" \
+              backplane/yamllint \
+              -f github \
+              ./rendered_charts \
+          ; then
+            # linting went ok
+            if [ -n "$ACT" ]; then
+              docker volume rm "$volname"
+            fi
+            exit 0
+          else
+            # linting failed
+            if [ -n "$ACT" ]; then
+              docker volume rm "$volname"
+            fi
+            exit 1
+          fi
