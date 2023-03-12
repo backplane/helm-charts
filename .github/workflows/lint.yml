@@ -68,6 +68,7 @@ jobs:
       - name: yamllint (rendered_charts)
         run: |-
           #!/bin/sh
+          ACT="${ACT:-}"
 
           # patch for act envionment
           if [ -n "$ACT" ]; then
