@@ -1,0 +1,14 @@
+apiVersion: v1
+entries:
+  example:
+  - apiVersion: v2
+    appVersion: 1.16.0
+    created: "2023-03-12T15:29:54.6200743Z"
+    description: A Helm chart for Kubernetes
+    digest: f22bdccd9bb4f106a0cb5af6fceb44cd9619b02a8d637f0a9d566df7be5dbe06
+    name: example
+    type: application
+    urls:
+    - https://github.com/backplane/helm-charts/releases/download/example-0.1.0/example-0.1.0.tgz
+    version: 0.1.0
+generated: "2023-03-12T15:29:54.6200792Z"
