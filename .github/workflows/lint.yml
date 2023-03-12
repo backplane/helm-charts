@@ -84,7 +84,7 @@ jobs:
               backplane/toybox \
               tar -C /work -xzf -
           else
-            volname="$(pwd):/work"
+            volname="$(pwd)"
           fi;
 
           if \
