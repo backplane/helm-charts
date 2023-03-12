@@ -1,5 +1,6 @@
-name: lint
-on:
+name: Infra
+
+"on":
   push:
     branches: ['main']
   pull_request:
