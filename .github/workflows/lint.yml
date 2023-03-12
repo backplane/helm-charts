@@ -42,6 +42,7 @@ jobs:
         run: |-
           #!/bin/sh
           set -eux
+          ACT="${ACT:-}"
 
           # patch for act envionment
           if [ -n "$ACT" ]; then
@@ -68,6 +69,7 @@ jobs:
       - name: yamllint (rendered_charts)
         run: |-
           #!/bin/sh
+          set -eux
           ACT="${ACT:-}"
 
           # patch for act envionment
