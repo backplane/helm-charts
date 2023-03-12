@@ -58,6 +58,7 @@ jobs:
 
   release:
     if: github.event_name == 'push'
+    needs: lint-test
     runs-on: ubuntu-latest
     permissions:
       contents: write
